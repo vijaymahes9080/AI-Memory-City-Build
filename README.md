@@ -4,6 +4,12 @@
 
 AI Memory City is a **privacy-first**, **local-first** application that transforms static text files, PDFs, bookmarks, and datasets into a dynamically evolving 3D isometric city. In this system, knowledge is not organized in folders; instead, it is built into districts, streets, buildings, and rooms, aligning with the human brain's natural capacity for spatial, semantic, and temporal recall.
 
+## 🎨 Concept Gallery
+
+| 🏙️ 3D Isometric Mind City | 🏚️ Memory Decay & Archaeologist | 🌉 P2P Mind Metropolitan Bridge |
+| :--- | :--- | :--- |
+| ![3D Mind City](assets/memory_city_isometric.png) | ![Memory Decay Ruins](assets/memory_city_ruins.png) | ![P2P Bridge](assets/memory_city_bridge.png) |
+
 ---
 
 ## 🏙️ System Architecture
