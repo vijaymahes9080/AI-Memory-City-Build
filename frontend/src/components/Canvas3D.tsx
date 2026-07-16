@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useCityStore, Building, Road } from '../store';
-import { CloudRain, Sun, CloudSnow, AlertTriangle, CloudFog, CloudLightning } from 'lucide-react';
+import { useCityStore, store, Building } from '../store';
+import { CloudRain, Sun, CloudSnow, CloudFog, CloudLightning } from 'lucide-react';
 
 interface Particle {
   x: number;
@@ -138,7 +138,7 @@ export const Canvas3D: React.FC = () => {
       }
 
       // Filter buildings based on time travel (older states hide newer assets)
-      const filteredBuildings = buildings.filter((b, idx) => {
+      const filteredBuildings = buildings.filter((_b, idx) => {
         if (!timeTravelMode) return true;
         // Map list index directly to time travel range
         const cut = Math.ceil((buildings.length * timeTravelIndex) / 10);
@@ -190,25 +190,47 @@ export const Canvas3D: React.FC = () => {
         const pSrc = project(r.source.x, 0, r.source.z, w, h, pan.x, pan.y, zoom);
         const pTgt = project(r.target.x, 0, r.target.z, w, h, pan.x, pan.y, zoom);
 
-        ctx.beginPath();
-        ctx.moveTo(pSrc.x, pSrc.y);
-        ctx.lineTo(pTgt.x, pTgt.y);
-        ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
-        ctx.lineWidth = 2 * (zoom / 2);
-        ctx.stroke();
+        if (r.rel_type === 'P2P_BRIDGE') {
+          // Glow bridge underlay
+          ctx.beginPath();
+          ctx.moveTo(pSrc.x, pSrc.y);
+          ctx.lineTo(pTgt.x, pTgt.y);
+          ctx.strokeStyle = 'rgba(168, 85, 247, 0.4)';
+          ctx.lineWidth = 8 * (zoom / 2);
+          ctx.stroke();
 
-        // Data packet flow animation along roads
-        const timeFraction = (animationAge % 120) / 120;
-        const packetX = pSrc.x + (pTgt.x - pSrc.x) * timeFraction;
-        const packetY = pSrc.y + (pTgt.y - pSrc.y) * timeFraction;
+          // Main bridge line
+          ctx.beginPath();
+          ctx.moveTo(pSrc.x, pSrc.y);
+          ctx.lineTo(pTgt.x, pTgt.y);
+          ctx.strokeStyle = '#d8b4fe';
+          ctx.lineWidth = 2 * (zoom / 2);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(pSrc.x, pSrc.y);
+          ctx.lineTo(pTgt.x, pTgt.y);
+          ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
+          ctx.lineWidth = 2 * (zoom / 2);
+          ctx.stroke();
+        }
 
-        ctx.beginPath();
-        ctx.arc(packetX, packetY, 3 * (zoom / 2), 0, 2 * Math.PI);
-        ctx.fillStyle = '#00f0ff';
-        ctx.shadowColor = '#00f0ff';
-        ctx.shadowBlur = 8;
-        ctx.fill();
-        ctx.shadowBlur = 0; // reset
+        // Multiple data packet flows along roads representing semantic traffic
+        const numPackets = r.rel_type === 'P2P_BRIDGE' ? 5 : 3;
+        for (let p = 0; p < numPackets; p++) {
+          const phaseOffset = p * (120 / numPackets);
+          const timeFraction = ((animationAge + phaseOffset) % 120) / 120;
+          const packetX = pSrc.x + (pTgt.x - pSrc.x) * timeFraction;
+          const packetY = pSrc.y + (pTgt.y - pSrc.y) * timeFraction;
+
+          ctx.beginPath();
+          ctx.arc(packetX, packetY, (r.rel_type === 'P2P_BRIDGE' ? 4.5 : 2.5) * (zoom / 2), 0, 2 * Math.PI);
+          ctx.fillStyle = r.rel_type === 'P2P_BRIDGE' ? '#e9d5ff' : '#00f0ff';
+          ctx.shadowColor = r.rel_type === 'P2P_BRIDGE' ? '#a855f7' : '#00f0ff';
+          ctx.shadowBlur = 8;
+          ctx.fill();
+          ctx.shadowBlur = 0; // reset
+        }
       });
 
       // 4. Draw Buildings (Isometric solid rendering)
@@ -231,7 +253,6 @@ export const Canvas3D: React.FC = () => {
         const bh = b.height;
 
         // Draw points of Isometric Box
-        const p0 = project(bx - bw/2, by, bz - bd/2, w, h, pan.x, pan.y, zoom);
         const p1 = project(bx + bw/2, by, bz - bd/2, w, h, pan.x, pan.y, zoom);
         const p2 = project(bx + bw/2, by, bz + bd/2, w, h, pan.x, pan.y, zoom);
         const p3 = project(bx - bw/2, by, bz + bd/2, w, h, pan.x, pan.y, zoom);
@@ -242,7 +263,8 @@ export const Canvas3D: React.FC = () => {
         const p7 = project(bx - bw/2, by + bh, bz + bd/2, w, h, pan.x, pan.y, zoom);
 
         // Styling colors with opacity
-        const hex = b.color || '#3b82f6';
+        const isRuin = b.style_type === 'ruin' || b.abandoned;
+        const hex = isRuin ? '#4b5563' : (b.color || '#3b82f6');
         ctx.globalAlpha = opacity;
 
         // Top Roof Face
@@ -288,6 +310,32 @@ export const Canvas3D: React.FC = () => {
           ctx.lineTo(p7.x, p7.y);
           ctx.closePath();
           ctx.fillStyle = "rgba(255,255,255,0.85)";
+          ctx.fill();
+        }
+
+        // Structural Cracks & Green Moss overlay for ruins
+        if (isRuin) {
+          ctx.strokeStyle = '#1f2937';
+          ctx.lineWidth = 1.5 * (zoom / 2);
+
+          // Diagonal structural cracks on Roof
+          ctx.beginPath();
+          ctx.moveTo(p4.x, p4.y);
+          ctx.lineTo((p4.x + p6.x) / 2 + (Math.sin(parseInt(b.id.slice(-2), 16) || 0) * 4), (p4.y + p6.y) / 2);
+          ctx.lineTo(p6.x, p6.y);
+          ctx.stroke();
+
+          // Cracks running down right wall
+          ctx.beginPath();
+          ctx.moveTo(p5.x, p5.y);
+          ctx.lineTo((p1.x + p5.x) / 2 + 2, (p1.y + p5.y) / 2);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+
+          // Green Moss patch overlay on roof (signifying time decay)
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.4)';
+          ctx.beginPath();
+          ctx.ellipse((p4.x + p6.x) / 2, (p4.y + p6.y) / 2, 8 * zoom, 4 * zoom, 0.1, 0, 2 * Math.PI);
           ctx.fill();
         }
 
@@ -426,7 +474,7 @@ export const Canvas3D: React.FC = () => {
       }
     });
 
-    useCityStore.setSelectedBuilding(clicked);
+    store.setSelectedBuilding(clicked);
   };
 
   // Helper function to dynamically shade colors for 3D walls
@@ -467,6 +515,7 @@ export const Canvas3D: React.FC = () => {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
         onClick={handleCanvasClick}
         className="block w-full h-full"
       />

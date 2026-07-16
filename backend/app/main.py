@@ -1,4 +1,5 @@
 import os
+import json
 import uuid
 import asyncio
 import random
@@ -346,6 +347,30 @@ def visit_building(node_id: str):
         session.add(TimeTravelLog(node_id=node_id, event_type="visit", payload=json.dumps({"visits": node.visits_count})))
         session.commit()
         return {"status": "success", "visits": node.visits_count}
+
+@app.post("/api/nodes/{node_id}/restore")
+def restore_building(node_id: str):
+    """Restores a decayed structure to health, removing ruins/abandonment."""
+    with Session(engine) as session:
+        node = session.exec(select(KnowledgeNode).where(KnowledgeNode.id == node_id)).first()
+        if not node:
+            return {"error": "Node not found"}
+            
+        node.health_status = "sunny"
+        
+        spatial = session.exec(select(SpatialObject).where(SpatialObject.node_id == node_id)).first()
+        if spatial:
+            spatial.abandoned = False
+            spatial.style_type = "building"
+            from .engines.layout import DISTRICT_TEMPLATES
+            template = DISTRICT_TEMPLATES.get(spatial.district_id, DISTRICT_TEMPLATES["general"])
+            spatial.color_hex = template["color"]
+            
+        session.add(node)
+        session.add(spatial)
+        session.add(TimeTravelLog(node_id=node_id, event_type="restore", payload=json.dumps({"status": "restored"})))
+        session.commit()
+        return {"status": "success", "message": f"Successfully restored {node.title}."}
 
 @app.post("/api/chat")
 def chat_endpoint(agent: str, node_id: str, message: str):

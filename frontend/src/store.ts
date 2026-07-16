@@ -183,6 +183,101 @@ export const store = {
     }
   },
 
+  async restoreNode(building: Building) {
+    try {
+      const res = await fetch(`/api/nodes/${building.node_id}/restore`, { method: 'POST' });
+      const data = await res.json();
+      if (data.status === 'success') {
+        this.addLog(`⛏️ Excavated and restored: ${building.title}`);
+        await this.fetchCity();
+        const updated = state.buildings.find(b => b.id === building.id) || null;
+        updateState({ selectedBuilding: updated });
+      }
+    } catch (err) {
+      console.error("Error restoring building", err);
+    }
+  },
+
+  connectExternalCity() {
+    if (state.districts.some(d => d.id === 'external_philosophy')) {
+      this.addLog("🌉 External bridge already established.");
+      return;
+    }
+
+    const extDistrict: District = {
+      id: 'external_philosophy',
+      name: 'External Mind (P2P)',
+      color: '#a855f7',
+      center_x: -80.0,
+      center_z: -80.0
+    };
+
+    const extBuildings: Building[] = [
+      {
+        id: 'bld_ext_1',
+        node_id: 'ext_1',
+        district_id: 'external_philosophy',
+        title: 'P2P Philosophy Library',
+        summary: 'Collaborative knowledge node shared from Vijay\'s peer node detailing Eastern Philosophy and modern ethics.',
+        content_type: 'markdown',
+        importance: 0.85,
+        visits_count: 5,
+        health_status: 'sunny',
+        x: -70.0,
+        y: 0.0,
+        z: -70.0,
+        height: 8.0,
+        width: 3.5,
+        depth: 3.5,
+        color: '#a855f7',
+        style_type: 'building',
+        abandoned: false
+      },
+      {
+        id: 'bld_ext_2',
+        node_id: 'ext_2',
+        district_id: 'external_philosophy',
+        title: 'Decentralized Ethics Tower',
+        summary: 'Dynamic peer ledger documenting ethical frameworks for AI agents and distributed consensus protocols.',
+        content_type: 'code',
+        importance: 0.95,
+        visits_count: 12,
+        health_status: 'rainbow',
+        x: -90.0,
+        y: 0.0,
+        z: -90.0,
+        height: 12.0,
+        width: 4.0,
+        depth: 4.0,
+        color: '#a855f7',
+        style_type: 'skyscraper',
+        abandoned: false
+      }
+    ];
+
+    const extRoads: Road[] = [
+      {
+        id: 'road_bridge_p2p',
+        source: { x: 0.0, z: 0.0 },
+        target: { x: -80.0, z: -80.0 },
+        rel_type: 'P2P_BRIDGE'
+      },
+      {
+        id: 'road_ext_internal',
+        source: { x: -70.0, z: -70.0 },
+        target: { x: -90.0, z: -90.0 },
+        rel_type: 'RELATED_TO'
+      }
+    ];
+
+    updateState({
+      districts: [...state.districts, extDistrict],
+      buildings: [...state.buildings, ...extBuildings],
+      roads: [...state.roads, ...extRoads]
+    });
+    this.addLog("🌉 Peer-to-Peer bridge successfully built to 'External Mind'!");
+  },
+
   setSearchQuery(query: string) {
     updateState({ searchQuery: query });
   },

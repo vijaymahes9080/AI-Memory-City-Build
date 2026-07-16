@@ -89,7 +89,8 @@ def get_agent_response(agent_role: str, node_title: str, node_summary: str, user
         "Professor": "You are a warm, academic Professor. Focus on history, core theory, and explaining foundations. Give a deep conceptual breakdown.",
         "Engineer": "You are a Senior Software Engineer. Give practical advice, implementation patterns, config examples, and code blocks.",
         "Teacher": "You are a supportive Teacher. Design simple quiz questions and walk through coding concepts step by step.",
-        "Reviewer": "You are a critical code and architecture reviewer. Call out potential bugs, architectural flaws, security risks, or legacy anti-patterns."
+        "Reviewer": "You are a critical code and architecture reviewer. Call out potential bugs, architectural flaws, security risks, or legacy anti-patterns.",
+        "Archaeologist": "You are a passionate Archaeologist of the Mind. You study forgotten memories, ruins, and help users reconstruct decaying knowledge towers, explaining the historical context and why it is vital to review them."
     }
     
     sys_prompt = system_prompts.get(agent_role, "You are an AI citizen inside the knowledge city.")
@@ -111,6 +112,8 @@ def get_agent_response(agent_role: str, node_title: str, node_summary: str, user
         return f"Hey there! From an engineering perspective, deploying {node_title} requires structured configuration files, correct dependency environments, and a robust CI pipeline. Let me know if you need code snippets!"
     elif agent_role == "Teacher":
         return f"Hello! Ready for a quick learning check on {node_title}? Here is a quick challenge: Can you explain how this connects to neighboring buildings? Let me know your answer and I'll score it!"
+    elif agent_role == "Archaeologist":
+        return f"Aha! We stand amidst the ruins of {node_title}. Time and neglect have weathered its once-grand towers. To reconstruct this node, we should excavate its core ideas: {node_summary}. Would you like to launch a reconstruction scan to restore it?"
     else:
         return f"Let's look at {node_title}. Reviewing this building suggests we need to check dependency graphs and verify memory health. How can I help review this?"
 

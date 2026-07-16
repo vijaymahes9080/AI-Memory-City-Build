@@ -1,4 +1,5 @@
 import math
+import re
 from typing import List, Dict, Any
 from ..models import KnowledgeNode, RelationEdge, SpatialObject
 
@@ -24,15 +25,21 @@ def determine_district(node: KnowledgeNode) -> str:
     finance_keywords = ["business", "money", "career", "finance", "startup", "office", "stock", "economy"]
     personal_keywords = ["home", "meeting", "personal", "health", "diary", "workout", "recipe"]
     
-    if any(k in title_lower or k in summary_lower for k in tech_keywords):
+    def matches_any(keywords, text):
+        for k in keywords:
+            if re.search(r'\b' + re.escape(k) + r'\b', text):
+                return True
+        return False
+        
+    if matches_any(tech_keywords, title_lower) or matches_any(tech_keywords, summary_lower):
         return "technology"
-    elif any(k in title_lower or k in summary_lower for k in science_keywords):
+    elif matches_any(science_keywords, title_lower) or matches_any(science_keywords, summary_lower):
         return "science"
-    elif any(k in title_lower or k in summary_lower for k in creative_keywords):
+    elif matches_any(creative_keywords, title_lower) or matches_any(creative_keywords, summary_lower):
         return "creative"
-    elif any(k in title_lower or k in summary_lower for k in finance_keywords):
+    elif matches_any(finance_keywords, title_lower) or matches_any(finance_keywords, summary_lower):
         return "finance"
-    elif any(k in title_lower or k in summary_lower for k in personal_keywords):
+    elif matches_any(personal_keywords, title_lower) or matches_any(personal_keywords, summary_lower):
         return "personal"
     return "general"
 

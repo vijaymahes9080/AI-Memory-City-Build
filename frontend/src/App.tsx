@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useCityStore, store, Building, ChatMessage } from './store';
+import { useCityStore, store, ChatMessage } from './store';
 import { Canvas3D } from './components/Canvas3D';
 import { 
-  Search, UploadCloud, Terminal, FileText, Send, X, 
+  Search, UploadCloud, FileText, Send, X, 
   HelpCircle, CheckCircle, ShieldAlert, Award, Clock, Activity 
 } from 'lucide-react';
 
 export const App: React.FC = () => {
   const { 
-    buildings, selectedBuilding, searchQuery, 
+    selectedBuilding, searchQuery, 
     timeTravelMode, timeTravelIndex, isUploading, logs 
   } = useCityStore();
 
@@ -18,7 +18,7 @@ export const App: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Chat fields
-  const [activeAgent, setActiveAgent] = useState<'Professor' | 'Engineer' | 'Teacher' | 'Reviewer'>('Professor');
+  const [activeAgent, setActiveAgent] = useState<'Professor' | 'Engineer' | 'Teacher' | 'Reviewer' | 'Archaeologist'>('Professor');
   const [chatInput, setChatInput] = useState('');
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +39,17 @@ export const App: React.FC = () => {
   useEffect(() => {
     store.fetchCity();
   }, []);
+
+  // Auto-select Archaeologist when clicking ruins, or default to Professor
+  useEffect(() => {
+    if (selectedBuilding) {
+      if (selectedBuilding.abandoned || selectedBuilding.style_type === 'ruin') {
+        setActiveAgent('Archaeologist');
+      } else {
+        setActiveAgent('Professor');
+      }
+    }
+  }, [selectedBuilding]);
 
   // Connect WebSocket for live sync updates
   useEffect(() => {
@@ -201,6 +212,15 @@ export const App: React.FC = () => {
 
         {/* Time Travel Slider & Score Dashboard */}
         <div className="flex items-center gap-3 pointer-events-auto">
+          {/* Connect P2P Bridge */}
+          <button
+            onClick={() => store.connectExternalCity()}
+            className="glass-panel px-4 py-2.5 rounded-2xl flex items-center gap-2 hover:bg-cyber-accent/15 border border-cyber-border hover:border-cyber-accent/40 shadow-md text-xs font-semibold text-purple-300 transition-all cursor-pointer"
+            title="Establish P2P Bridge to External Mind"
+          >
+            <span>Bridge P2P 🌉</span>
+          </button>
+
           {/* Exp Level Shield */}
           <div className="glass-panel px-4 py-2 rounded-2xl flex items-center gap-2 shadow-md">
             <Award className="text-yellow-400 w-5 h-5 animate-pulse" />
@@ -338,6 +358,34 @@ export const App: React.FC = () => {
           {/* Details Scroll Area */}
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
             
+            {/* Decay Status Warning / Restore Option */}
+            {(selectedBuilding.abandoned || selectedBuilding.style_type === 'ruin') && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3.5 flex flex-col gap-2.5 shadow-sm">
+                <div className="flex items-start gap-2.5">
+                  <ShieldAlert className="text-red-400 w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-xs font-bold text-red-300">Memory Decay Detected</div>
+                    <div className="text-[10px] text-gray-400 leading-relaxed mt-0.5">
+                      This building is in ruins due to a lack of reviews. Reconstruct it to restore the knowledge tower.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    await store.restoreNode(selectedBuilding);
+                    setExpPoints(prev => {
+                      const next = prev + 100;
+                      localStorage.setItem('memory_city_exp', next.toString());
+                      return next;
+                    });
+                  }}
+                  className="w-full bg-red-950/60 hover:bg-red-900 border border-red-500/50 hover:border-red-400 text-red-200 hover:text-white rounded-lg py-1.5 text-xs font-semibold shadow transition-all flex items-center justify-center gap-1.5"
+                >
+                  ⛏️ Excavate & Restore Structure (+100 EP)
+                </button>
+              </div>
+            )}
+
             {/* Summary */}
             <div className="bg-cyber-bg/40 border border-cyber-border/60 rounded-xl p-3">
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Concept Summary</h3>
@@ -366,7 +414,9 @@ export const App: React.FC = () => {
               
               {/* Agent Selector HUD */}
               <div className="flex border-b border-cyber-border bg-cyber-bg/50 text-[10px] text-gray-400 font-semibold uppercase tracking-wider text-center select-none">
-                {(['Professor', 'Engineer', 'Teacher', 'Reviewer'] as const).map(role => (
+                {((selectedBuilding.abandoned || selectedBuilding.style_type === 'ruin'
+                  ? ['Archaeologist', 'Professor', 'Engineer', 'Teacher']
+                  : ['Professor', 'Engineer', 'Teacher', 'Reviewer']) as any[]).map(role => (
                   <button
                     key={role}
                     onClick={() => setActiveAgent(role)}
